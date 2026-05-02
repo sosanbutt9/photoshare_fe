@@ -1,0 +1,37 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+  --shadow-soft: 0 10px 40px -12px rgb(15 39 68 / 0.12);
+  --shadow-soft-sm: 0 4px 20px -6px rgb(15 39 68 / 0.08);
+
+  /* Navy + white brand palette */
+  --color-navy-50: #f0f4fb;
+  --color-navy-100: #dce6f5;
+  --color-navy-200: #bcd0ea;
+  --color-navy-300: #8fb0d9;
+  --color-navy-400: #5c89c2;
+  --color-navy-500: #3d6ca8;
+  --color-navy-600: #2f5690;
+  --color-navy-700: #284774;
+  --color-navy-800: #263d60;
+  --color-navy-900: #1e3552;
+  --color-navy-950: #0f1f36;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  font-family: var(--font-sans);
+  @apply bg-white text-navy-950 antialiased;
+}
+
+#root {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
