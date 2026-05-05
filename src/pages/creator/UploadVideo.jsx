@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import * as videoService from '../../services/videoService'
 import { DashboardLayout } from '../../components/layout/DashboardLayout'
 import { VideoUploadForm } from '../../components/video/VideoUploadForm'
+import { Button } from '../../components/ui/Button'
 
 export function UploadVideo() {
   const navigate = useNavigate()
@@ -33,6 +34,13 @@ export function UploadVideo() {
       title="New video post"
       description="Upload one or multiple videos in one post. You can edit metadata later."
     >
+      <div className="mx-auto mb-4 flex max-w-xl justify-end">
+        <Link to="/creator/upload">
+          <Button variant="secondary" size="sm">
+            Switch to photo upload
+          </Button>
+        </Link>
+      </div>
       <VideoUploadForm onSubmit={handleUpload} loading={loading} />
     </DashboardLayout>
   )
