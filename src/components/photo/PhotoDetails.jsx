@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Calendar, ChevronLeft, ChevronRight, User } from 'lucide-react'
+import { Calendar, ChevronLeft, ChevronRight, User, UserRound } from 'lucide-react'
 import { photoMediaUrls } from '../../lib/apiHelpers'
 
 export function PhotoDetails({ photo }) {
@@ -14,6 +14,11 @@ export function PhotoDetails({ photo }) {
   const urls = photoMediaUrls(photo)
   const title = photo.title || 'Untitled'
   const description = photo.caption || photo.description || ''
+  const taggedPeopleRaw = photo.people_present || ''
+  const taggedPeople = taggedPeopleRaw
+    .split(',')
+    .map((p) => p.trim())
+    .filter(Boolean)
   const creator =
     photo.creator_username ||
     photo.creator?.username ||
@@ -102,6 +107,22 @@ export function PhotoDetails({ photo }) {
           ) : (
             <p className="mt-6 text-sm text-navy-500">No caption.</p>
           )}
+          {taggedPeople.length ? (
+            <div className="mt-4">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-navy-600">Tagged people</p>
+              <div className="flex flex-wrap gap-2">
+                {taggedPeople.map((name, idx) => (
+                  <span
+                    key={`${name}-${idx}`}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-navy-200 bg-navy-50 px-2.5 py-1 text-xs font-medium text-navy-800"
+                  >
+                    <UserRound className="h-3.5 w-3.5 text-navy-700" />
+                    {name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

@@ -11,9 +11,12 @@ import { PhotoView } from '../pages/PhotoView'
 import { CreatorDashboard } from '../pages/creator/CreatorDashboard'
 import { UploadPhoto } from '../pages/creator/UploadPhoto'
 import { MyPhotos } from '../pages/creator/MyPhotos'
+import { UploadVideo } from '../pages/creator/UploadVideo'
+import { MyVideos } from '../pages/creator/MyVideos'
 import { AdminDashboard } from '../pages/admin/AdminDashboard'
 import { Profile } from '../pages/Profile'
 import { NotFound } from '../pages/NotFound'
+import { VideoView } from '../pages/VideoView'
 
 function AppShell() {
   return (
@@ -49,6 +52,7 @@ export function AppRoutes() {
         />
         <Route path="/explore" element={<Explore />} />
         <Route path="/photos/:id" element={<PhotoView />} />
+        <Route path="/videos/:id" element={<VideoView />} />
         <Route
           path="/profile"
           element={
@@ -83,6 +87,26 @@ export function AppRoutes() {
             <ProtectedRoute>
               <RoleRoute allowedRoles={['creator', 'admin']}>
                 <MyPhotos />
+              </RoleRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/creator/videos/upload"
+          element={
+            <ProtectedRoute>
+              <RoleRoute allowedRoles={['creator', 'admin']}>
+                <UploadVideo />
+              </RoleRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/creator/videos"
+          element={
+            <ProtectedRoute>
+              <RoleRoute allowedRoles={['creator', 'admin']}>
+                <MyVideos />
               </RoleRoute>
             </ProtectedRoute>
           }

@@ -18,7 +18,7 @@ export function CreatorDashboard() {
   return (
     <DashboardLayout
       title="Studio"
-      description="Jump to upload or manage posts — your public grid lives on Profile."
+      description="Upload or manage your photos and videos — your public grid lives on Profile."
       maxWidthClassName="max-w-3xl"
       headingClassName="text-2xl font-bold tracking-tight text-navy-950 sm:text-3xl"
     >
@@ -45,9 +45,19 @@ export function CreatorDashboard() {
               <Link to="/creator/upload" className="block sm:inline-block">
                 <Button className="w-full font-semibold sm:w-auto sm:min-w-[10.5rem]">New post</Button>
               </Link>
+              <Link to="/creator/videos/upload" className="block sm:inline-block">
+                <Button variant="secondary" className="w-full font-semibold sm:w-auto sm:min-w-[10.5rem]">
+                  New video
+                </Button>
+              </Link>
               <Link to="/creator/photos" className="block sm:inline-block">
                 <Button variant="secondary" className="w-full font-semibold sm:w-auto sm:min-w-[10.5rem]">
                   Your photos
+                </Button>
+              </Link>
+              <Link to="/creator/videos" className="block sm:inline-block">
+                <Button variant="ghost" className="w-full font-semibold sm:w-auto sm:min-w-[10.5rem]">
+                  Your videos
                 </Button>
               </Link>
             </div>
