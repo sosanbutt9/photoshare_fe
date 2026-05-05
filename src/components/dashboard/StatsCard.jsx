@@ -12,7 +12,7 @@ export function StatsCard({ label, value, hint, icon: Icon, valueClassName = '' 
           {hint ? <p className="mt-1 text-xs leading-relaxed text-navy-500">{hint}</p> : null}
         </div>
         {Icon ? (
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-navy-50 to-navy-100/80 text-navy-800 ring-1 ring-navy-100">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-navy-50 to-navy-100/80 text-navy-800 ring-1 ring-navy-100">
             <Icon className="h-5 w-5" aria-hidden />
           </span>
         ) : null}
