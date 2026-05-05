@@ -42,7 +42,7 @@ export function PhotoGrid({
   return (
     <div className={gridClass}>
       {photos.map((p) => (
-        <PhotoCard key={p.id} photo={p} compact={compact} />
+        <PhotoCard key={`${p.__kind || 'photo'}-${p.id}`} photo={p} compact={compact} />
       ))}
     </div>
   )

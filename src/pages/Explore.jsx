@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Search } from 'lucide-react'
 import * as photoService from '../services/photoService'
+import * as videoService from '../services/videoService'
 import { normalizeList } from '../lib/apiHelpers'
 import { PhotoGrid } from '../components/photo/PhotoGrid'
 import { Input } from '../components/ui/Input'
@@ -19,12 +20,20 @@ export function Explore() {
     setLoading(true)
     setError(null)
     try {
-      const data = q.trim()
-        ? await photoService.searchPhotos(q.trim())
-        : await photoService.listPhotos()
-      setPhotos(normalizeList(data))
+      const [photoData, videoData] = q.trim()
+        ? await Promise.all([photoService.searchPhotos(q.trim()), videoService.searchVideos(q.trim())])
+        : await Promise.all([photoService.listPhotos(), videoService.listVideos()])
+
+      const photos = normalizeList(photoData).map((p) => ({ ...p, __kind: 'photo' }))
+      const videos = normalizeList(videoData).map((v) => ({ ...v, __kind: 'video' }))
+      const merged = [...photos, ...videos].sort((a, b) => {
+        const ad = new Date(a.created_at || a.updated_at || 0).getTime()
+        const bd = new Date(b.created_at || b.updated_at || 0).getTime()
+        return bd - ad
+      })
+      setPhotos(merged)
     } catch (e) {
-      setError(e.response?.data?.detail || e.message || 'Failed to load photos')
+      setError(e.response?.data?.detail || e.message || 'Failed to load posts')
       setPhotos([])
     } finally {
       setLoading(false)
@@ -52,7 +61,7 @@ export function Explore() {
         <div className="text-center sm:text-left">
           <h1 className="text-lg font-semibold tracking-tight text-navy-950 sm:text-xl">Explore</h1>
           <p className="mt-1 text-xs text-navy-600 sm:text-sm">
-            Search or scroll the grid — tap any tile to open the post.
+            Search or scroll the grid — photos and videos are mixed like an Instagram feed.
           </p>
         </div>
         <form onSubmit={applySearch} className="flex w-full max-w-xs gap-2 sm:max-w-sm">
@@ -77,7 +86,7 @@ export function Explore() {
         loading={loading}
         error={error}
         compact
-        emptyTitle={q ? 'No matches for your search' : 'No photos to show yet'}
+        emptyTitle={q ? 'No matches for your search' : 'No posts to show yet'}
         emptyHint={
           q
             ? 'Try another keyword or clear search to see everything.'

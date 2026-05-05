@@ -1,5 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ArrowLeft, Calendar, ChevronLeft, ChevronRight, MapPin, User, UserRound, Video } from 'lucide-react'
 import * as videoService from '../services/videoService'
 import { videoMediaUrls } from '../lib/apiHelpers'
@@ -64,29 +64,26 @@ export function VideoView() {
   const safeIndex = n ? Math.min(active, n - 1) : 0
   const activeSrc = n ? media[safeIndex] : ''
 
-  const metaChips = useMemo(() => {
-    const chips = []
-    if (location) {
-      chips.push({
-        id: 'location',
-        icon: MapPin,
-        text: location,
-      })
-    }
-    chips.push({
-      id: 'clips',
-      icon: Video,
-      text: `${n} clip${n === 1 ? '' : 's'}`,
+  const metaChips = []
+  if (location) {
+    metaChips.push({
+      id: 'location',
+      icon: MapPin,
+      text: location,
     })
-    if (typeof video.view_count === 'number') {
-      chips.push({
-        id: 'views',
-        icon: User,
-        text: `${video.view_count} view${video.view_count === 1 ? '' : 's'}`,
-      })
-    }
-    return chips
-  }, [location, n, video.view_count])
+  }
+  metaChips.push({
+    id: 'clips',
+    icon: Video,
+    text: `${n} clip${n === 1 ? '' : 's'}`,
+  })
+  if (typeof video.view_count === 'number') {
+    metaChips.push({
+      id: 'views',
+      icon: User,
+      text: `${video.view_count} view${video.view_count === 1 ? '' : 's'}`,
+    })
+  }
 
   const goPrev = () => {
     if (n <= 1) return

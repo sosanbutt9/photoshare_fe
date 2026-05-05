@@ -1,12 +1,13 @@
 import { Link } from 'react-router-dom'
-import { Heart, Layers, MessageCircle, Star } from 'lucide-react'
-import { photoImageUrl } from '../../lib/apiHelpers'
+import { Heart, Layers, MessageCircle, Play, Star, Video } from 'lucide-react'
+import { photoImageUrl, videoFileUrl } from '../../lib/apiHelpers'
 
 export function PhotoCard({ photo, compact }) {
   if (!photo) return null
+  const isVideo = photo.__kind === 'video' || Boolean(photo.video)
   const id = photo.id
   const title = photo.title || 'Untitled'
-  const src = photoImageUrl(photo)
+  const src = isVideo ? videoFileUrl(photo) : photoImageUrl(photo)
   const creator =
     photo.creator_username ||
     photo.creator?.username ||
@@ -24,14 +25,24 @@ export function PhotoCard({ photo, compact }) {
   const isCarousel =
     (typeof photo.media_count === 'number' && photo.media_count > 1) ||
     (Array.isArray(photo.media) && photo.media.length > 1)
+  const href = isVideo ? `/videos/${id}` : `/photos/${id}`
+  const badgeTitle = isVideo ? 'Multiple videos' : 'Multiple photos'
 
   if (compact) {
     return (
       <Link
-        to={`/photos/${id}`}
+        to={href}
         className="group relative aspect-square overflow-hidden bg-navy-100 outline outline-1 outline-white"
       >
-        {src ? (
+        {src ? isVideo ? (
+          <video
+            src={src}
+            className="h-full w-full object-cover transition duration-200 group-hover:scale-[1.02]"
+            muted
+            playsInline
+            preload="metadata"
+          />
+        ) : (
           <img
             src={src}
             alt={title}
@@ -39,14 +50,17 @@ export function PhotoCard({ photo, compact }) {
             loading="lazy"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-[10px] text-navy-500">
-            —
-          </div>
+          <div className="flex h-full w-full items-center justify-center text-[10px] text-navy-500">—</div>
         )}
+        {isVideo ? (
+          <span className="pointer-events-none absolute left-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-md bg-black/60 text-white shadow-sm">
+            <Play className="h-3.5 w-3.5 fill-white text-white" aria-hidden />
+          </span>
+        ) : null}
         {isCarousel ? (
           <span
             className="pointer-events-none absolute bottom-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-md bg-navy-950/75 text-white shadow-sm"
-            title="Multiple photos"
+            title={badgeTitle}
           >
             <Layers className="h-3.5 w-3.5" aria-hidden />
           </span>
@@ -71,11 +85,19 @@ export function PhotoCard({ photo, compact }) {
 
   return (
     <Link
-      to={`/photos/${id}`}
+      to={href}
       className="group overflow-hidden rounded-xl border border-navy-100 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-navy-200 hover:shadow-md"
     >
       <div className="relative aspect-[4/3] overflow-hidden bg-navy-50">
-        {src ? (
+        {src ? isVideo ? (
+          <video
+            src={src}
+            className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+            muted
+            playsInline
+            preload="metadata"
+          />
+        ) : (
           <img
             src={src}
             alt={title}
@@ -83,14 +105,18 @@ export function PhotoCard({ photo, compact }) {
             loading="lazy"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-sm text-navy-400">
-            No preview
-          </div>
+          <div className="flex h-full w-full items-center justify-center text-sm text-navy-400">No preview</div>
         )}
+        {isVideo ? (
+          <span className="pointer-events-none absolute left-2 top-2 inline-flex items-center gap-1 rounded-md bg-black/60 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
+            <Play className="h-3 w-3 fill-white text-white" />
+            Video
+          </span>
+        ) : null}
         {isCarousel ? (
           <span
             className="pointer-events-none absolute bottom-2 right-2 flex h-8 w-8 items-center justify-center rounded-lg bg-navy-950/75 text-white shadow-md ring-1 ring-white/20"
-            title="Multiple photos"
+            title={badgeTitle}
           >
             <Layers className="h-4 w-4" aria-hidden />
           </span>
@@ -100,6 +126,12 @@ export function PhotoCard({ photo, compact }) {
         <h3 className="line-clamp-1 text-sm font-semibold text-navy-950">{title}</h3>
         <p className="text-xs text-navy-600">@{creator}</p>
         <div className="flex flex-wrap items-center gap-3 text-[11px] text-navy-500">
+          {isVideo ? (
+            <span className="inline-flex items-center gap-1">
+              <Video className="h-3.5 w-3.5" />
+              Video
+            </span>
+          ) : null}
           {rating != null ? (
             <span className="inline-flex items-center gap-1">
               <Star className="h-3.5 w-3.5 text-amber-500" fill="currentColor" />
