@@ -8,6 +8,7 @@ import { useAppSelector } from '../store/hooks'
 import { Button } from '../components/ui/Button'
 import { Loader } from '../components/ui/Loader'
 import { normalizeList, photoImageUrl, userAvatarUrl, formatStat } from '../lib/apiHelpers'
+import { FollowUsersModal } from '../components/profile/FollowUsersModal'
 
 export function UserPublicProfile() {
   const { id } = useParams()
@@ -19,6 +20,7 @@ export function UserPublicProfile() {
   const [photosLoading, setPhotosLoading] = useState(true)
   const [error, setError] = useState(null)
   const [followBusy, setFollowBusy] = useState(false)
+  const [followModal, setFollowModal] = useState(null)
 
   const userId = id != null ? Number(id) : NaN
   const isSelf = isAuthenticated && me?.id != null && Number(me.id) === userId
@@ -187,12 +189,24 @@ export function UserPublicProfile() {
 
               <ul className="flex justify-center gap-6 text-sm sm:justify-start md:gap-10">
                 <li>
-                  <span className="font-semibold tabular-nums">{formatStat(profile.followers_count ?? 0)}</span>{' '}
-                  <span className="text-navy-600">followers</span>
+                  <button
+                    type="button"
+                    className="text-left transition hover:opacity-80"
+                    onClick={() => setFollowModal('followers')}
+                  >
+                    <span className="font-semibold tabular-nums">{formatStat(profile.followers_count ?? 0)}</span>{' '}
+                    <span className="text-navy-600">followers</span>
+                  </button>
                 </li>
                 <li>
-                  <span className="font-semibold tabular-nums">{formatStat(profile.following_count ?? 0)}</span>{' '}
-                  <span className="text-navy-600">following</span>
+                  <button
+                    type="button"
+                    className="text-left transition hover:opacity-80"
+                    onClick={() => setFollowModal('following')}
+                  >
+                    <span className="font-semibold tabular-nums">{formatStat(profile.following_count ?? 0)}</span>{' '}
+                    <span className="text-navy-600">following</span>
+                  </button>
                 </li>
                 <li>
                   <span className="font-semibold tabular-nums">{formatStat(aggregates.posts)}</span>{' '}
@@ -214,6 +228,14 @@ export function UserPublicProfile() {
             Posts
           </span>
         </nav>
+
+        <FollowUsersModal
+          open={followModal != null}
+          onClose={() => setFollowModal(null)}
+          title={followModal === 'following' ? 'Following' : 'Followers'}
+          userId={profile.id}
+          mode={followModal === 'following' ? 'following' : 'followers'}
+        />
 
         <section className="mt-1" aria-label="Posts">
           {photosLoading ? (

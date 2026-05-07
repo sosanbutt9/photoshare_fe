@@ -21,6 +21,7 @@ import {
   isCreatorCapable,
   userAvatarUrl,
 } from '../lib/apiHelpers'
+import { FollowUsersModal } from '../components/profile/FollowUsersModal'
 
 const schema = z.object({
   username: z.string().min(2, 'At least 2 characters').max(150, 'Too long'),
@@ -65,6 +66,7 @@ export function Profile() {
   const [photos, setPhotos] = useState([])
   const [photosLoading, setPhotosLoading] = useState(true)
   const [photosError, setPhotosError] = useState(null)
+  const [followModal, setFollowModal] = useState(null)
 
   const uid = user?.id ?? user?.pk
   const creatorCapable = isCreatorCapable(user)
@@ -243,12 +245,24 @@ export function Profile() {
 
               <ul className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm sm:justify-start md:gap-x-10">
                 <li>
-                  <span className="font-semibold tabular-nums">{formatStat(user.followers_count ?? 0)}</span>{' '}
-                  <span className="text-navy-600">followers</span>
+                  <button
+                    type="button"
+                    className="text-left transition hover:opacity-80"
+                    onClick={() => setFollowModal('followers')}
+                  >
+                    <span className="font-semibold tabular-nums">{formatStat(user.followers_count ?? 0)}</span>{' '}
+                    <span className="text-navy-600">followers</span>
+                  </button>
                 </li>
                 <li>
-                  <span className="font-semibold tabular-nums">{formatStat(user.following_count ?? 0)}</span>{' '}
-                  <span className="text-navy-600">following</span>
+                  <button
+                    type="button"
+                    className="text-left transition hover:opacity-80"
+                    onClick={() => setFollowModal('following')}
+                  >
+                    <span className="font-semibold tabular-nums">{formatStat(user.following_count ?? 0)}</span>{' '}
+                    <span className="text-navy-600">following</span>
+                  </button>
                 </li>
                 <li>
                   <span className="font-semibold tabular-nums">{formatStat(aggregates.posts)}</span>{' '}
@@ -359,6 +373,14 @@ export function Profile() {
           )}
         </section>
       </div>
+
+      <FollowUsersModal
+        open={followModal != null}
+        onClose={() => setFollowModal(null)}
+        title={followModal === 'following' ? 'Following' : 'Followers'}
+        userId={uid}
+        mode={followModal === 'following' ? 'following' : 'followers'}
+      />
 
       <Modal
         open={editOpen}

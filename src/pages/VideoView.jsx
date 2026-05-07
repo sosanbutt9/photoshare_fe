@@ -1,4 +1,4 @@
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import {
@@ -8,6 +8,8 @@ import {
   ChevronRight,
   Heart,
   MapPin,
+  Pencil,
+  Trash2,
   User,
   UserRound,
   Video,
@@ -15,15 +17,18 @@ import {
 import * as videoService from '../services/videoService'
 import * as commentService from '../services/commentService'
 import * as ratingService from '../services/ratingService'
-import { videoMediaUrls, normalizeList } from '../lib/apiHelpers'
+import { isAdminUser, videoMediaUrls, normalizeList } from '../lib/apiHelpers'
 import { useAppSelector } from '../store/hooks'
 import { Button } from '../components/ui/Button'
 import { RatingStars } from '../components/photo/RatingStars'
 import { CommentBox } from '../components/photo/CommentBox'
 import { CommentList } from '../components/photo/CommentList'
+import { Modal } from '../components/ui/Modal'
+import { Input } from '../components/ui/Input'
 
 export function VideoView() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const { user, isAuthenticated } = useAppSelector((s) => s.auth)
   const [video, setVideo] = useState(null)
   const [comments, setComments] = useState([])
@@ -36,6 +41,18 @@ export function VideoView() {
   const [ratingBusy, setRatingBusy] = useState(false)
   const [likeBusy, setLikeBusy] = useState(false)
   const [userRating, setUserRating] = useState(0)
+  const [editOpen, setEditOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [saveBusy, setSaveBusy] = useState(false)
+  const [deleteBusy, setDeleteBusy] = useState(false)
+  const [editForm, setEditForm] = useState({
+    title: '',
+    caption: '',
+    location: '',
+    people_present: '',
+  })
+  const [editVideoFiles, setEditVideoFiles] = useState([])
+  const [editVideoKey, setEditVideoKey] = useState(0)
 
   const loadVideo = useCallback(async () => {
     setLoading(true)
@@ -170,6 +187,68 @@ export function VideoView() {
       toast.error(e.response?.data?.detail || 'Could not update like')
     } finally {
       setLikeBusy(false)
+    }
+  }
+
+  const creatorIdForAcl = video?.creator?.id ?? video?.creator_id
+  const canManageVideo =
+    isAuthenticated &&
+    creatorIdForAcl != null &&
+    user?.id != null &&
+    (Number(creatorIdForAcl) === Number(user.id) || isAdminUser(user))
+
+  const saveEdit = async () => {
+    if (!id) return
+    setSaveBusy(true)
+    try {
+      const updated = await videoService.updateVideo(id, { ...editForm, videoFiles: editVideoFiles })
+      setVideo(updated)
+      toast.success('Post updated')
+      setEditOpen(false)
+      setEditVideoFiles([])
+      setEditVideoKey((k) => k + 1)
+    } catch (e) {
+      const msg =
+        e.response?.data?.detail ||
+        (typeof e.response?.data === 'object' && JSON.stringify(e.response.data)) ||
+        'Could not update post'
+      toast.error(typeof msg === 'string' ? msg : 'Could not update post')
+    } finally {
+      setSaveBusy(false)
+    }
+  }
+
+  const beginEditVideo = () => {
+    if (!video) return
+    setEditVideoFiles([])
+    setEditVideoKey((k) => k + 1)
+    setEditForm({
+      title: video.title || '',
+      caption: video.caption || '',
+      location: video.location || '',
+      people_present: video.people_present || '',
+    })
+    setEditOpen(true)
+  }
+
+  const closeEditVideo = () => {
+    setEditOpen(false)
+    setEditVideoFiles([])
+    setEditVideoKey((k) => k + 1)
+  }
+
+  const confirmDeleteVideo = async () => {
+    if (!id) return
+    setDeleteBusy(true)
+    try {
+      await videoService.deleteVideo(id)
+      toast.success('Post deleted')
+      setDeleteOpen(false)
+      navigate('/explore')
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Could not delete video')
+    } finally {
+      setDeleteBusy(false)
     }
   }
 
@@ -393,6 +472,112 @@ export function VideoView() {
           </div>
         </div>
       </div>
+
+      {canManageVideo ? (
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button type="button" variant="secondary" size="sm" onClick={beginEditVideo}>
+            <Pencil className="mr-1.5 h-4 w-4" aria-hidden />
+            Edit post
+          </Button>
+          <Button type="button" variant="danger" size="sm" onClick={() => setDeleteOpen(true)}>
+            <Trash2 className="mr-1.5 h-4 w-4" aria-hidden />
+            Delete post
+          </Button>
+        </div>
+      ) : null}
+
+      <Modal
+        open={editOpen}
+        onClose={closeEditVideo}
+        title="Edit video post"
+        footer={
+          <>
+            <Button variant="secondary" onClick={closeEditVideo}>
+              Cancel
+            </Button>
+            <Button loading={saveBusy} onClick={saveEdit}>
+              Save
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <Input
+            label="Title"
+            value={editForm.title}
+            onChange={(e) => setEditForm((p) => ({ ...p, title: e.target.value }))}
+            placeholder="Title"
+          />
+          <div className="w-full text-left">
+            <label htmlFor="video-view-edit-caption" className="mb-1.5 block text-sm font-medium text-navy-800">
+              Caption
+            </label>
+            <textarea
+              id="video-view-edit-caption"
+              rows={3}
+              value={editForm.caption}
+              onChange={(e) => setEditForm((p) => ({ ...p, caption: e.target.value }))}
+              className="w-full rounded-xl border border-navy-200 bg-white px-3.5 py-2.5 text-sm text-navy-950 shadow-sm placeholder:text-navy-400 focus:border-navy-600 focus:outline-none focus:ring-2 focus:ring-navy-600/20"
+            />
+          </div>
+          <Input
+            label="Location"
+            value={editForm.location}
+            onChange={(e) => setEditForm((p) => ({ ...p, location: e.target.value }))}
+            placeholder="Location"
+          />
+          <Input
+            label="People present"
+            value={editForm.people_present}
+            onChange={(e) => setEditForm((p) => ({ ...p, people_present: e.target.value }))}
+            placeholder="People present"
+          />
+          <div className="text-left">
+            <label htmlFor="video-view-edit-videos" className="mb-1.5 block text-sm font-medium text-navy-800">
+              Replace videos
+            </label>
+            <input
+              key={editVideoKey}
+              id="video-view-edit-videos"
+              type="file"
+              accept="video/*"
+              multiple
+              className="block w-full text-sm text-navy-600 file:mr-4 file:rounded-lg file:border-0 file:bg-navy-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-navy-900 hover:file:bg-navy-100"
+              onChange={(e) => {
+                const list = e.target.files
+                setEditVideoFiles(list && list.length ? Array.from(list) : [])
+              }}
+            />
+            <p className="mt-1 text-xs text-navy-500">
+              Optional — first file is the main clip; up to 10 files replace all clips in the post.
+            </p>
+            {editVideoFiles.length ? (
+              <p className="mt-1 text-xs font-medium text-navy-700">{editVideoFiles.length} file(s) selected</p>
+            ) : null}
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        title="Delete this post?"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setDeleteOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="danger" loading={deleteBusy} onClick={confirmDeleteVideo}>
+              Delete
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-navy-600">
+          This removes the video from PhotoShare Cloud for everyone. Comments and ratings are removed with it. This
+          cannot be undone.
+        </p>
+      </Modal>
 
       <section className="mt-8 rounded-xl border border-navy-100 bg-white p-5 shadow-sm sm:p-6">
         <h2 className="text-base font-semibold text-navy-950">Ratings</h2>

@@ -16,7 +16,30 @@ export async function createVideo(formData) {
   return unwrapVideo(data)
 }
 
-export async function updateVideo(id, body) {
+const MAX_VIDEOS_PER_POST = 10
+
+/**
+ * @param {number|string} id
+ * @param {{ title?: string, caption?: string, location?: string, people_present?: string, videoFiles?: File[] }} fields
+ */
+export async function updateVideo(id, fields) {
+  const { title, caption, location, people_present, videoFiles } = fields
+  const files = Array.isArray(videoFiles) ? videoFiles.filter(Boolean) : []
+  let body
+  if (files.length > 0) {
+    if (files.length > MAX_VIDEOS_PER_POST) {
+      throw new Error(`You can upload at most ${MAX_VIDEOS_PER_POST} videos per update.`)
+    }
+    const fd = new FormData()
+    fd.append('title', title ?? '')
+    fd.append('caption', caption ?? '')
+    fd.append('location', location ?? '')
+    fd.append('people_present', people_present ?? '')
+    files.forEach((file) => fd.append('videos', file))
+    body = fd
+  } else {
+    body = { title, caption, location, people_present }
+  }
   const { data } = await http.patch(`/api/videos/${id}/`, body)
   return unwrapVideo(data)
 }

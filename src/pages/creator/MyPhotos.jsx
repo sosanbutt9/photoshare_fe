@@ -9,6 +9,7 @@ import { DashboardLayout } from '../../components/layout/DashboardLayout'
 import { PhotoGrid } from '../../components/photo/PhotoGrid'
 import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
+import { Input } from '../../components/ui/Input'
 export function MyPhotos() {
   const { user } = useAppSelector((s) => s.auth)
   const [photos, setPhotos] = useState([])
@@ -16,6 +17,11 @@ export function MyPhotos() {
   const [error, setError] = useState(null)
   const [pendingDelete, setPendingDelete] = useState(null)
   const [deleting, setDeleting] = useState(false)
+  const [editing, setEditing] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [form, setForm] = useState({ title: '', caption: '', location: '', people_present: '' })
+  const [editImageFiles, setEditImageFiles] = useState([])
+  const [editImageKey, setEditImageKey] = useState(0)
 
   const uid = user?.id ?? user?.pk
 
@@ -40,6 +46,43 @@ export function MyPhotos() {
   useEffect(() => {
     load()
   }, [load])
+
+  const openEdit = (photo) => {
+    setEditing(photo)
+    setEditImageFiles([])
+    setEditImageKey((k) => k + 1)
+    setForm({
+      title: photo?.title || '',
+      caption: photo?.caption || '',
+      location: photo?.location || '',
+      people_present: photo?.people_present || '',
+    })
+  }
+
+  const closeEdit = () => {
+    setEditing(null)
+    setEditImageFiles([])
+    setEditImageKey((k) => k + 1)
+  }
+
+  const saveEdit = async () => {
+    if (!editing?.id) return
+    setSaving(true)
+    try {
+      await photoService.updatePhoto(editing.id, { ...form, imageFiles: editImageFiles })
+      toast.success('Post updated')
+      closeEdit()
+      await load()
+    } catch (e) {
+      const msg =
+        e.response?.data?.detail ||
+        (typeof e.response?.data === 'object' && JSON.stringify(e.response.data)) ||
+        'Could not update post'
+      toast.error(typeof msg === 'string' ? msg : 'Could not update post')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   const confirmDelete = async () => {
     if (!pendingDelete) return
@@ -106,12 +149,15 @@ export function MyPhotos() {
                             View
                           </Button>
                         </Link>
-                        <Link to={`/photos/${p.id}`} className="flex-1 min-w-[100px]">
-                          <Button variant="ghost" className="w-full" size="sm">
-                            <Pencil className="h-4 w-4" />
-                            Details
-                          </Button>
-                        </Link>
+                        <Button
+                          variant="ghost"
+                          className="flex-1 min-w-[100px]"
+                          size="sm"
+                          onClick={() => openEdit(p)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                          Edit
+                        </Button>
                         <Button
                           variant="danger"
                           size="sm"
@@ -130,6 +176,78 @@ export function MyPhotos() {
           )}
         </div>
       )}
+
+      <Modal
+        open={Boolean(editing)}
+        onClose={closeEdit}
+        title="Edit post"
+        footer={
+          <>
+            <Button variant="secondary" onClick={closeEdit}>
+              Cancel
+            </Button>
+            <Button loading={saving} onClick={saveEdit}>
+              Save
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <Input
+            label="Title"
+            value={form.title}
+            onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
+            placeholder="Title"
+          />
+          <div className="w-full text-left">
+            <label htmlFor="edit-photo-caption" className="mb-1.5 block text-sm font-medium text-navy-800">
+              Caption
+            </label>
+            <textarea
+              id="edit-photo-caption"
+              rows={3}
+              value={form.caption}
+              onChange={(e) => setForm((prev) => ({ ...prev, caption: e.target.value }))}
+              className="w-full rounded-xl border border-navy-200 bg-white px-3.5 py-2.5 text-sm text-navy-950 shadow-sm placeholder:text-navy-400 focus:border-navy-600 focus:outline-none focus:ring-2 focus:ring-navy-600/20"
+            />
+          </div>
+          <Input
+            label="Location"
+            value={form.location}
+            onChange={(e) => setForm((prev) => ({ ...prev, location: e.target.value }))}
+            placeholder="Location"
+          />
+          <Input
+            label="People present"
+            value={form.people_present}
+            onChange={(e) => setForm((prev) => ({ ...prev, people_present: e.target.value }))}
+            placeholder="People present"
+          />
+          <div className="text-left">
+            <label htmlFor="edit-photo-images" className="mb-1.5 block text-sm font-medium text-navy-800">
+              Replace images
+            </label>
+            <input
+              key={editImageKey}
+              id="edit-photo-images"
+              type="file"
+              accept="image/*"
+              multiple
+              className="block w-full text-sm text-navy-600 file:mr-4 file:rounded-lg file:border-0 file:bg-navy-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-navy-900 hover:file:bg-navy-100"
+              onChange={(e) => {
+                const list = e.target.files
+                setEditImageFiles(list && list.length ? Array.from(list) : [])
+              }}
+            />
+            <p className="mt-1 text-xs text-navy-500">
+              Optional — first file becomes the cover; you can select up to 10 images to replace the whole carousel.
+            </p>
+            {editImageFiles.length ? (
+              <p className="mt-1 text-xs font-medium text-navy-700">{editImageFiles.length} file(s) selected</p>
+            ) : null}
+          </div>
+        </div>
+      </Modal>
 
       <Modal
         open={Boolean(pendingDelete)}

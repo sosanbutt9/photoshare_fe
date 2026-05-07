@@ -16,3 +16,14 @@ export async function unfollowUser(userId) {
   const { data } = await http.delete(`/api/auth/users/${userId}/follow/`)
   return data
 }
+
+/** Paginated: `{ success, count, next, previous, results }`. */
+export async function listFollowers(userId, params = {}) {
+  const { data } = await http.get(`/api/auth/users/${userId}/followers/`, { params })
+  return data
+}
+
+export async function listFollowing(userId, params = {}) {
+  const { data } = await http.get(`/api/auth/users/${userId}/following/`, { params })
+  return data
+}

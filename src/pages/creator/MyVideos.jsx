@@ -20,6 +20,8 @@ export function MyVideos() {
   const [editing, setEditing] = useState(null)
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({ title: '', caption: '', location: '', people_present: '' })
+  const [editVideoFiles, setEditVideoFiles] = useState([])
+  const [editVideoKey, setEditVideoKey] = useState(0)
 
   const uid = user?.id ?? user?.pk
 
@@ -62,6 +64,8 @@ export function MyVideos() {
 
   const openEdit = (video) => {
     setEditing(video)
+    setEditVideoFiles([])
+    setEditVideoKey((k) => k + 1)
     setForm({
       title: video?.title || '',
       caption: video?.caption || '',
@@ -70,13 +74,19 @@ export function MyVideos() {
     })
   }
 
+  const closeEdit = () => {
+    setEditing(null)
+    setEditVideoFiles([])
+    setEditVideoKey((k) => k + 1)
+  }
+
   const saveEdit = async () => {
     if (!editing?.id) return
     setSaving(true)
     try {
-      await videoService.updateVideo(editing.id, form)
+      await videoService.updateVideo(editing.id, { ...form, videoFiles: editVideoFiles })
       toast.success('Video updated')
-      setEditing(null)
+      closeEdit()
       await load()
     } catch (e) {
       const msg =
@@ -171,11 +181,11 @@ export function MyVideos() {
 
       <Modal
         open={Boolean(editing)}
-        onClose={() => setEditing(null)}
+        onClose={closeEdit}
         title="Edit video"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setEditing(null)}>
+            <Button variant="secondary" onClick={closeEdit}>
               Cancel
             </Button>
             <Button loading={saving} onClick={saveEdit}>
@@ -215,6 +225,29 @@ export function MyVideos() {
             onChange={(e) => setForm((p) => ({ ...p, people_present: e.target.value }))}
             placeholder="People present"
           />
+          <div className="text-left">
+            <label htmlFor="edit-video-files" className="mb-1.5 block text-sm font-medium text-navy-800">
+              Replace videos
+            </label>
+            <input
+              key={editVideoKey}
+              id="edit-video-files"
+              type="file"
+              accept="video/*"
+              multiple
+              className="block w-full text-sm text-navy-600 file:mr-4 file:rounded-lg file:border-0 file:bg-navy-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-navy-900 hover:file:bg-navy-100"
+              onChange={(e) => {
+                const list = e.target.files
+                setEditVideoFiles(list && list.length ? Array.from(list) : [])
+              }}
+            />
+            <p className="mt-1 text-xs text-navy-500">
+              Optional — first file is the main clip; up to 10 files replace all clips in the post.
+            </p>
+            {editVideoFiles.length ? (
+              <p className="mt-1 text-xs font-medium text-navy-700">{editVideoFiles.length} file(s) selected</p>
+            ) : null}
+          </div>
         </div>
       </Modal>
     </DashboardLayout>
