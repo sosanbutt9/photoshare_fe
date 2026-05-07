@@ -49,7 +49,7 @@ export async function getMe() {
   return unwrapUser(data)
 }
 
-/** PATCH `/api/auth/me/` — username, full_name, email (partial). */
+/** PATCH `/api/auth/me/` — JSON fields or ``FormData`` (e.g. avatar file). */
 export async function updateProfile(payload) {
   const { data } = await http.patch('/api/auth/me/', payload)
   return unwrapUser(data)

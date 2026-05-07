@@ -79,6 +79,26 @@ export function videoMediaUrls(video) {
   return single ? [single] : []
 }
 
+/** Profile / creator ``avatar`` from API (absolute or relative path). */
+export function userAvatarUrl(user) {
+  if (!user?.avatar) return ''
+  const raw = user.avatar
+  if (typeof raw === 'string' && (raw.startsWith('http') || raw.startsWith('data:'))) {
+    return raw
+  }
+  const base = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
+  if (typeof raw === 'string') return `${base}${raw.startsWith('/') ? '' : '/'}${raw}`
+  return ''
+}
+
+/** Compact counts for profile / grid badges (e.g. 1.2k, 2.5m). */
+export function formatStat(n) {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}m`
+  if (n >= 10_000) return `${Math.round(n / 1000)}k`
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
+  return String(Math.round(n))
+}
+
 export function normalizeRole(role) {
   if (!role) return 'consumer'
   return String(role).toLowerCase()

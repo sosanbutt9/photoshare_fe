@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Calendar, ChevronLeft, ChevronRight, User, UserRound } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Calendar, ChevronLeft, ChevronRight, MapPin, User, UserRound } from 'lucide-react'
 import { photoMediaUrls } from '../../lib/apiHelpers'
 
 export function PhotoDetails({ photo }) {
@@ -25,6 +26,8 @@ export function PhotoDetails({ photo }) {
     photo.owner_username ||
     photo.user?.username ||
     'Unknown'
+  const creatorId = photo.creator?.id ?? photo.creator_id
+  const location = (photo.location || '').trim()
   const rawDate = photo.created_at || photo.created || photo.uploaded_at
   const created = rawDate ? new Date(rawDate).toLocaleDateString() : null
 
@@ -93,12 +96,24 @@ export function PhotoDetails({ photo }) {
           <div className="mt-4 flex flex-wrap gap-4 text-sm text-navy-600">
             <span className="inline-flex items-center gap-2">
               <User className="h-4 w-4 text-navy-700" />
-              @{creator}
+              {creatorId ? (
+                <Link to={`/users/${creatorId}`} className="font-medium text-navy-900 hover:underline">
+                  @{creator}
+                </Link>
+              ) : (
+                <>@{creator}</>
+              )}
             </span>
             {created ? (
               <span className="inline-flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-navy-700" />
                 {created}
+              </span>
+            ) : null}
+            {location ? (
+              <span className="inline-flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-navy-700" />
+                {location}
               </span>
             ) : null}
           </div>

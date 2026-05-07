@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Heart } from 'lucide-react'
 import * as photoService from '../services/photoService'
 import * as commentService from '../services/commentService'
 import * as ratingService from '../services/ratingService'
@@ -25,6 +25,7 @@ export function PhotoView() {
   const [commentBusy, setCommentBusy] = useState(false)
   const [deleteId, setDeleteId] = useState(null)
   const [ratingBusy, setRatingBusy] = useState(false)
+  const [likeBusy, setLikeBusy] = useState(false)
   const [userRating, setUserRating] = useState(0)
 
   const loadPhoto = useCallback(async () => {
@@ -140,6 +141,24 @@ export function PhotoView() {
     }
   }
 
+  const handleLike = async () => {
+    if (!isAuthenticated) {
+      toast.error('Log in to like')
+      return
+    }
+    setLikeBusy(true)
+    try {
+      const data = await photoService.togglePhotoLike(id)
+      setPhoto((p) =>
+        p ? { ...p, likes_count: data.likes_count, liked_by_me: data.liked } : p
+      )
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Could not update like')
+    } finally {
+      setLikeBusy(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8">
@@ -173,6 +192,31 @@ export function PhotoView() {
       </Link>
 
       <PhotoDetails photo={photo} />
+
+      <section className="mt-8 rounded-xl border border-navy-100 bg-white p-5 shadow-sm sm:p-6">
+        <h2 className="text-base font-semibold text-navy-950">Likes</h2>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <Button
+            type="button"
+            variant={photo.liked_by_me ? 'primary' : 'secondary'}
+            size="sm"
+            className="font-semibold"
+            loading={likeBusy}
+            onClick={handleLike}
+          >
+            <Heart className={`h-4 w-4 ${photo.liked_by_me ? 'fill-current' : ''}`} aria-hidden />
+            {photo.liked_by_me ? 'Liked' : 'Like'} · {photo.likes_count ?? 0}
+          </Button>
+          {!isAuthenticated ? (
+            <span className="text-xs text-navy-500">
+              <Link to="/login" className="font-semibold text-navy-900 underline-offset-2 hover:underline">
+                Log in
+              </Link>{' '}
+              to like.
+            </span>
+          ) : null}
+        </div>
+      </section>
 
       <section className="mt-8 rounded-xl border border-navy-100 bg-white p-5 shadow-sm sm:p-6">
         <h2 className="text-base font-semibold text-navy-950">Ratings</h2>

@@ -14,10 +14,12 @@ import { Loader } from '../components/ui/Loader'
 import { Modal } from '../components/ui/Modal'
 import {
   formatRoleLabel,
+  formatStat,
   normalizeList,
   normalizeRole,
   photoImageUrl,
   isCreatorCapable,
+  userAvatarUrl,
 } from '../lib/apiHelpers'
 
 const schema = z.object({
@@ -33,15 +35,17 @@ function roleHint(role) {
   return 'Browse and discover photos on PhotoShare Cloud'
 }
 
-function formatStat(n) {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}m`
-  if (n >= 10_000) return `${Math.round(n / 1000)}k`
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
-  return String(Math.round(n))
-}
-
-function ProfileAvatar({ username, fullName }) {
+function ProfileAvatar({ username, fullName, src }) {
   const initial = (fullName?.trim()?.[0] || username?.trim()?.[0] || '?').toUpperCase()
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt=""
+        className="h-[77px] w-[77px] shrink-0 rounded-full object-cover ring-1 ring-navy-100 sm:h-[150px] sm:w-[150px] sm:ring-2"
+      />
+    )
+  }
   return (
     <div
       className="flex h-[77px] w-[77px] shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-navy-600 to-navy-950 text-2xl font-light text-white ring-1 ring-navy-100 sm:h-[150px] sm:w-[150px] sm:text-5xl sm:ring-2"
@@ -57,6 +61,7 @@ export function Profile() {
   const navigate = useNavigate()
   const { user, loading, error } = useAppSelector((s) => s.auth)
   const [editOpen, setEditOpen] = useState(false)
+  const [avatarFile, setAvatarFile] = useState(null)
   const [photos, setPhotos] = useState([])
   const [photosLoading, setPhotosLoading] = useState(true)
   const [photosError, setPhotosError] = useState(null)
@@ -137,15 +142,26 @@ export function Profile() {
       : null
 
   const onSubmit = handleSubmit(async (values) => {
-    const action = await dispatch(
-      updateProfile({
-        username: values.username.trim(),
-        email: values.email.trim(),
-        full_name: values.full_name?.trim() ?? '',
-      })
-    )
+    let action
+    if (avatarFile) {
+      const fd = new FormData()
+      fd.append('username', values.username.trim())
+      fd.append('email', values.email.trim())
+      fd.append('full_name', values.full_name?.trim() ?? '')
+      fd.append('avatar', avatarFile)
+      action = await dispatch(updateProfile(fd))
+    } else {
+      action = await dispatch(
+        updateProfile({
+          username: values.username.trim(),
+          email: values.email.trim(),
+          full_name: values.full_name?.trim() ?? '',
+        })
+      )
+    }
     if (updateProfile.fulfilled.match(action)) {
       toast.success('Profile saved')
+      setAvatarFile(null)
       reset({
         username: action.payload.username ?? '',
         email: action.payload.email ?? '',
@@ -179,7 +195,11 @@ export function Profile() {
         <header className="border-b border-navy-100 pb-8">
           <div className="flex flex-col gap-6 sm:flex-row sm:gap-10 md:gap-24 lg:gap-28">
             <div className="flex justify-center sm:block sm:pl-8 md:pl-12">
-              <ProfileAvatar username={user.username} fullName={user.full_name} />
+              <ProfileAvatar
+                username={user.username}
+                fullName={user.full_name}
+                src={userAvatarUrl(user)}
+              />
             </div>
 
             <div className="flex min-w-0 flex-1 flex-col gap-5 text-navy-950">
@@ -221,7 +241,15 @@ export function Profile() {
                 </div>
               </div>
 
-              <ul className="flex justify-center gap-6 text-sm sm:justify-start md:gap-10">
+              <ul className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm sm:justify-start md:gap-x-10">
+                <li>
+                  <span className="font-semibold tabular-nums">{formatStat(user.followers_count ?? 0)}</span>{' '}
+                  <span className="text-navy-600">followers</span>
+                </li>
+                <li>
+                  <span className="font-semibold tabular-nums">{formatStat(user.following_count ?? 0)}</span>{' '}
+                  <span className="text-navy-600">following</span>
+                </li>
                 <li>
                   <span className="font-semibold tabular-nums">{formatStat(aggregates.posts)}</span>{' '}
                   <span className="text-navy-600">posts</span>
@@ -334,7 +362,10 @@ export function Profile() {
 
       <Modal
         open={editOpen}
-        onClose={() => setEditOpen(false)}
+        onClose={() => {
+          setAvatarFile(null)
+          setEditOpen(false)
+        }}
         title="Edit profile"
         footer={
           <>
@@ -352,7 +383,7 @@ export function Profile() {
               form="profile-edit-form"
               size="sm"
               loading={loading}
-              disabled={!isDirty}
+              disabled={!isDirty && !avatarFile}
               className="rounded-lg bg-navy-900 font-semibold hover:bg-navy-950 focus-visible:ring-navy-600"
             >
               Submit
@@ -361,6 +392,22 @@ export function Profile() {
         }
       >
         <form id="profile-edit-form" className="space-y-4" onSubmit={onSubmit}>
+          <div className="text-left">
+            <label htmlFor="profile-avatar" className="mb-1.5 block text-sm font-medium text-navy-800">
+              Profile photo
+            </label>
+            <input
+              id="profile-avatar"
+              type="file"
+              accept="image/*"
+              className="block w-full text-sm text-navy-600 file:mr-4 file:rounded-lg file:border-0 file:bg-navy-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-navy-900 hover:file:bg-navy-100"
+              onChange={(e) => {
+                const f = e.target.files?.[0]
+                setAvatarFile(f ?? null)
+              }}
+            />
+            <p className="mt-1 text-xs text-navy-500">Optional — JPG or PNG recommended.</p>
+          </div>
           <Input
             label="Username"
             autoComplete="username"
@@ -401,14 +448,15 @@ export function Profile() {
             size="sm"
             className="-ml-2 text-navy-500"
             disabled={!isDirty || loading}
-            onClick={() =>
-              user &&
+            onClick={() => {
+              if (!user) return
+              setAvatarFile(null)
               reset({
                 username: user.username ?? '',
                 email: user.email ?? '',
                 full_name: user.full_name ?? '',
               })
-            }
+            }}
           >
             Reset changes
           </Button>

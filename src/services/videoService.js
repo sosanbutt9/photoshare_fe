@@ -32,3 +32,8 @@ export async function searchVideos(q, extraParams = {}) {
   })
   return data
 }
+
+export async function toggleVideoLike(id) {
+  const { data } = await http.post(`/api/videos/${id}/like/`)
+  return data
+}

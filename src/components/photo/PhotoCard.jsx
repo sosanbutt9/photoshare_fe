@@ -1,8 +1,9 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Heart, Layers, MessageCircle, Play, Star, Video } from 'lucide-react'
 import { photoImageUrl, videoFileUrl } from '../../lib/apiHelpers'
 
 export function PhotoCard({ photo, compact }) {
+  const navigate = useNavigate()
   if (!photo) return null
   const isVideo = photo.__kind === 'video' || Boolean(photo.video)
   const id = photo.id
@@ -14,6 +15,8 @@ export function PhotoCard({ photo, compact }) {
     photo.owner_username ||
     photo.user?.username ||
     'Creator'
+  const creatorId = photo.creator?.id
+  const likesCount = photo.likes_count
   const rating =
     photo.average_rating ??
     photo.avg_rating ??
@@ -72,9 +75,15 @@ export function PhotoCard({ photo, compact }) {
               {Number(rating).toFixed(1)}
             </span>
           ) : null}
-          {ratingsCount != null ? (
+          {likesCount != null ? (
             <span className="flex items-center gap-1 drop-shadow">
-              <Heart className="h-4 w-4" aria-hidden />
+              <Heart className="h-4 w-4 fill-white text-white" aria-hidden />
+              {likesCount}
+            </span>
+          ) : null}
+          {ratingsCount != null && likesCount == null ? (
+            <span className="flex items-center gap-1 drop-shadow">
+              <Star className="h-4 w-4 fill-white text-white" aria-hidden />
               {ratingsCount}
             </span>
           ) : null}
@@ -124,7 +133,23 @@ export function PhotoCard({ photo, compact }) {
       </div>
       <div className="space-y-1.5 p-3 text-left">
         <h3 className="line-clamp-1 text-sm font-semibold text-navy-950">{title}</h3>
-        <p className="text-xs text-navy-600">@{creator}</p>
+        <p className="text-xs text-navy-600">
+          {creatorId ? (
+            <button
+              type="button"
+              className="font-medium text-navy-800 hover:text-navy-950 hover:underline"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                navigate(`/users/${creatorId}`)
+              }}
+            >
+              @{creator}
+            </button>
+          ) : (
+            <>@{creator}</>
+          )}
+        </p>
         <div className="flex flex-wrap items-center gap-3 text-[11px] text-navy-500">
           {isVideo ? (
             <span className="inline-flex items-center gap-1">
@@ -144,10 +169,17 @@ export function PhotoCard({ photo, compact }) {
               {comments}
             </span>
           ) : null}
-          <span className="inline-flex items-center gap-1">
-            <Heart className="h-3.5 w-3.5 text-rose-400" />
-            Open
-          </span>
+          {likesCount != null ? (
+            <span className="inline-flex items-center gap-1">
+              <Heart className="h-3.5 w-3.5 text-rose-400" />
+              {likesCount}
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1">
+              <Heart className="h-3.5 w-3.5 text-rose-400" />
+              Open
+            </span>
+          )}
         </div>
       </div>
     </Link>

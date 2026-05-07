@@ -1,16 +1,41 @@
 import { Link, useParams } from 'react-router-dom'
-import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, Calendar, ChevronLeft, ChevronRight, MapPin, User, UserRound, Video } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import toast from 'react-hot-toast'
+import {
+  ArrowLeft,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  Heart,
+  MapPin,
+  User,
+  UserRound,
+  Video,
+} from 'lucide-react'
 import * as videoService from '../services/videoService'
-import { videoMediaUrls } from '../lib/apiHelpers'
+import * as commentService from '../services/commentService'
+import * as ratingService from '../services/ratingService'
+import { videoMediaUrls, normalizeList } from '../lib/apiHelpers'
+import { useAppSelector } from '../store/hooks'
 import { Button } from '../components/ui/Button'
+import { RatingStars } from '../components/photo/RatingStars'
+import { CommentBox } from '../components/photo/CommentBox'
+import { CommentList } from '../components/photo/CommentList'
 
 export function VideoView() {
   const { id } = useParams()
+  const { user, isAuthenticated } = useAppSelector((s) => s.auth)
   const [video, setVideo] = useState(null)
+  const [comments, setComments] = useState([])
+  const [ratings, setRatings] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [active, setActive] = useState(0)
+  const [commentBusy, setCommentBusy] = useState(false)
+  const [deleteId, setDeleteId] = useState(null)
+  const [ratingBusy, setRatingBusy] = useState(false)
+  const [likeBusy, setLikeBusy] = useState(false)
+  const [userRating, setUserRating] = useState(0)
 
   const loadVideo = useCallback(async () => {
     setLoading(true)
@@ -26,6 +51,33 @@ export function VideoView() {
     }
   }, [id])
 
+  const loadComments = useCallback(async () => {
+    try {
+      const data = await commentService.listVideoComments(id)
+      setComments(normalizeList(data))
+    } catch {
+      setComments([])
+    }
+  }, [id])
+
+  const loadRatings = useCallback(async () => {
+    try {
+      const data = await ratingService.listVideoRatings(id)
+      const list = normalizeList(data)
+      setRatings(list)
+      const mine = list.find(
+        (r) =>
+          (r.user_id ?? r.user?.id) != null &&
+          user?.id != null &&
+          Number(r.user_id ?? r.user?.id) === Number(user.id)
+      )
+      const val = mine?.rating ?? mine?.score ?? mine?.stars ?? 0
+      setUserRating(Number(val) || 0)
+    } catch {
+      setRatings([])
+    }
+  }, [id, user])
+
   useEffect(() => {
     loadVideo()
   }, [loadVideo])
@@ -33,6 +85,93 @@ export function VideoView() {
   useEffect(() => {
     setActive(0)
   }, [video?.id])
+
+  useEffect(() => {
+    if (!id || error) return
+    loadComments()
+    loadRatings()
+  }, [id, error, loadComments, loadRatings])
+
+  const ratingCount = video?.ratings_count ?? ratings.length
+
+  const averageRating = useMemo(() => {
+    if (video?.average_rating != null) return Number(video.average_rating)
+    if (!ratings.length) return null
+    const nums = ratings
+      .map((r) => Number(r.rating ?? r.score ?? r.stars))
+      .filter((n) => !Number.isNaN(n) && n > 0)
+    if (!nums.length) return null
+    return nums.reduce((a, b) => a + b, 0) / nums.length
+  }, [video, ratings])
+
+  const handleComment = async ({ body }) => {
+    if (!isAuthenticated) {
+      toast.error('Log in to comment')
+      return
+    }
+    setCommentBusy(true)
+    try {
+      await commentService.createVideoComment(id, { body })
+      toast.success('Comment posted')
+      await loadComments()
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Could not post comment')
+    } finally {
+      setCommentBusy(false)
+    }
+  }
+
+  const handleDeleteComment = async (commentId) => {
+    setDeleteId(commentId)
+    try {
+      await commentService.deleteComment(commentId)
+      toast.success('Comment removed')
+      await loadComments()
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Could not delete comment')
+    } finally {
+      setDeleteId(null)
+    }
+  }
+
+  const handleRate = async (rating) => {
+    if (!isAuthenticated) {
+      toast.error('Log in to rate videos')
+      return
+    }
+    setRatingBusy(true)
+    try {
+      await ratingService.rateVideo(id, rating)
+      setUserRating(rating)
+      toast.success('Thanks for your rating')
+      await loadRatings()
+      await loadVideo()
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Could not save rating')
+    } finally {
+      setRatingBusy(false)
+    }
+  }
+
+  const handleLike = async () => {
+    if (!isAuthenticated) {
+      toast.error('Log in to like')
+      return
+    }
+    setLikeBusy(true)
+    try {
+      const data = await videoService.toggleVideoLike(id)
+      setVideo((v) =>
+        v
+          ? { ...v, likes_count: data.likes_count, liked_by_me: data.liked }
+          : v
+      )
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Could not update like')
+    } finally {
+      setLikeBusy(false)
+    }
+  }
 
   if (loading) {
     return <div className="mx-auto max-w-5xl px-4 py-10 text-sm text-navy-500">Loading video…</div>
@@ -54,6 +193,7 @@ export function VideoView() {
 
   const media = videoMediaUrls(video)
   const creator = video.creator?.username || 'Unknown'
+  const creatorId = video.creator?.id
   const created = video.created_at ? new Date(video.created_at).toLocaleDateString() : null
   const taggedPeople = String(video.people_present || '')
     .split(',')
@@ -63,6 +203,8 @@ export function VideoView() {
   const n = media.length
   const safeIndex = n ? Math.min(active, n - 1) : 0
   const activeSrc = n ? media[safeIndex] : ''
+  const likesCount = video.likes_count ?? 0
+  const liked = Boolean(video.liked_by_me)
 
   const metaChips = []
   if (location) {
@@ -175,7 +317,13 @@ export function VideoView() {
             <div className="mt-4 flex flex-wrap gap-4 text-sm text-navy-600">
               <span className="inline-flex items-center gap-2">
                 <User className="h-4 w-4 text-navy-700" />
-                @{creator}
+                {creatorId ? (
+                  <Link to={`/users/${creatorId}`} className="font-medium text-navy-900 hover:underline">
+                    @{creator}
+                  </Link>
+                ) : (
+                  <>@{creator}</>
+                )}
               </span>
               {created ? (
                 <span className="inline-flex items-center gap-2">
@@ -200,6 +348,27 @@ export function VideoView() {
                 })}
               </div>
             ) : null}
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <Button
+                type="button"
+                variant={liked ? 'primary' : 'secondary'}
+                size="sm"
+                className="font-semibold"
+                loading={likeBusy}
+                onClick={handleLike}
+              >
+                <Heart className={`h-4 w-4 ${liked ? 'fill-current' : ''}`} aria-hidden />
+                {liked ? 'Liked' : 'Like'} · {likesCount}
+              </Button>
+              {!isAuthenticated ? (
+                <span className="text-xs text-navy-500">
+                  <Link to="/login" className="font-semibold text-navy-900 underline-offset-2 hover:underline">
+                    Log in
+                  </Link>{' '}
+                  to like.
+                </span>
+              ) : null}
+            </div>
             {video.caption ? (
               <p className="mt-6 whitespace-pre-wrap leading-relaxed text-navy-800">{video.caption}</p>
             ) : (
@@ -224,6 +393,42 @@ export function VideoView() {
           </div>
         </div>
       </div>
+
+      <section className="mt-8 rounded-xl border border-navy-100 bg-white p-5 shadow-sm sm:p-6">
+        <h2 className="text-base font-semibold text-navy-950">Ratings</h2>
+        <p className="mt-1 text-sm text-navy-600">
+          {averageRating != null
+            ? `Average ${averageRating.toFixed(1)} out of 5 from ${ratingCount || 'several'} votes.`
+            : 'Be the first to rate this video.'}
+        </p>
+        <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <RatingStars
+            value={userRating}
+            onChange={isAuthenticated ? handleRate : undefined}
+            disabled={ratingBusy}
+            readOnly={!isAuthenticated}
+          />
+          {!isAuthenticated ? (
+            <p className="text-sm text-navy-600">
+              <Link to="/login" className="font-semibold text-navy-950 underline-offset-2 hover:underline">
+                Log in
+              </Link>{' '}
+              to leave your rating.
+            </p>
+          ) : null}
+        </div>
+      </section>
+
+      <section className="mt-8 space-y-4">
+        <h2 className="text-base font-semibold text-navy-950">Comments</h2>
+        <CommentBox onSubmit={handleComment} disabled={!isAuthenticated} loading={commentBusy} />
+        <CommentList
+          comments={comments}
+          currentUser={user}
+          onDelete={handleDeleteComment}
+          deletingId={deleteId}
+        />
+      </section>
     </div>
   )
 }

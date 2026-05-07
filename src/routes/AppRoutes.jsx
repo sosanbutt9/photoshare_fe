@@ -17,6 +17,7 @@ import { AdminDashboard } from '../pages/admin/AdminDashboard'
 import { Profile } from '../pages/Profile'
 import { NotFound } from '../pages/NotFound'
 import { VideoView } from '../pages/VideoView'
+import { UserPublicProfile } from '../pages/UserPublicProfile'
 
 function AppShell() {
   return (
@@ -51,6 +52,7 @@ export function AppRoutes() {
           }
         />
         <Route path="/explore" element={<Explore />} />
+        <Route path="/users/:id" element={<UserPublicProfile />} />
         <Route path="/photos/:id" element={<PhotoView />} />
         <Route path="/videos/:id" element={<VideoView />} />
         <Route

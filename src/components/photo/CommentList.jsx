@@ -1,6 +1,6 @@
 import { Trash2, User } from 'lucide-react'
 import { Button } from '../ui/Button'
-import { normalizeRole } from '../../lib/apiHelpers'
+import { normalizeRole, userAvatarUrl } from '../../lib/apiHelpers'
 
 function commentAuthor(c) {
   return c.author_username || c.user?.username || c.author?.username || 'User'
@@ -26,6 +26,7 @@ export function CommentList({ comments, currentUser, onDelete, deletingId }) {
     <ul className="space-y-2">
       {comments.map((c) => {
         const authorId = c.user_id ?? c.user?.id ?? c.author?.id
+        const av = userAvatarUrl(c.author || c.user)
         const canDelete =
           (uid != null && authorId != null && Number(authorId) === Number(uid)) || role === 'admin'
         return (
@@ -33,8 +34,12 @@ export function CommentList({ comments, currentUser, onDelete, deletingId }) {
             key={c.id}
             className="flex gap-3 rounded-xl border border-navy-100 bg-white p-4 shadow-sm"
           >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-navy-100 text-navy-800">
-              <User className="h-4 w-4" />
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-navy-100 text-navy-800">
+              {av ? (
+                <img src={av} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <User className="h-4 w-4" />
+              )}
             </span>
             <div className="min-w-0 flex-1 text-left">
               <div className="flex flex-wrap items-center justify-between gap-2">

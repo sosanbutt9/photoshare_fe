@@ -32,3 +32,8 @@ export async function searchPhotos(q, extraParams = {}) {
   })
   return data
 }
+
+export async function togglePhotoLike(id) {
+  const { data } = await http.post(`/api/photos/${id}/like/`)
+  return data
+}
